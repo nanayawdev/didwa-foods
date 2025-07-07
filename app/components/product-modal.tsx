@@ -83,7 +83,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogOverlay className="bg-background/80 backdrop-blur-sm" />
+      <DialogOverlay className="bg-background/0 backdrop-blur-[2px]" />
       <DialogContent className="sm:max-w-md p-0">
         <DialogHeader className="sr-only">
           <DialogTitle>{product.name}</DialogTitle>

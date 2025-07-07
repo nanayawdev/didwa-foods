@@ -1,28 +1,31 @@
-import { Button } from "../ui/button"
+'use client'
+
+import { Button } from '@/app/components/ui/button'
 
 interface CartSummaryProps {
   subtotal: number
-  deliveryFee: number
-  onCheckout: () => void
 }
 
-export function CartSummary({
-  subtotal,
-  deliveryFee,
-  onCheckout,
-}: CartSummaryProps) {
+export function CartSummary({ subtotal }: CartSummaryProps) {
+  const deliveryFee = 10 // Fixed delivery fee
   const total = subtotal + deliveryFee
 
+  const handleCheckout = () => {
+    // TODO: Implement checkout flow
+    console.log('Proceeding to checkout...')
+  }
+
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+    <div className="bg-white rounded-lg border p-6">
+      <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+      
       <div className="space-y-3">
-        <div className="flex justify-between">
-          <span className="text-gray-600">Subtotal</span>
+        <div className="flex justify-between text-sm">
+          <span>Subtotal</span>
           <span>₵{subtotal.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">Delivery Fee</span>
+        <div className="flex justify-between text-sm">
+          <span>Delivery Fee</span>
           <span>₵{deliveryFee.toFixed(2)}</span>
         </div>
         <div className="border-t pt-3">
@@ -32,10 +35,10 @@ export function CartSummary({
           </div>
         </div>
       </div>
-      <Button
-        onClick={onCheckout}
-        className="w-full mt-6"
-        disabled={subtotal === 0}
+
+      <Button 
+        onClick={handleCheckout}
+        className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700"
       >
         Proceed to Checkout
       </Button>
