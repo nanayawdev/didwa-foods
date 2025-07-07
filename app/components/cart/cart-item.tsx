@@ -1,9 +1,13 @@
+'use client'
+
 import Image from "next/image"
 import { Button } from "../ui/button"
+import { Minus, Plus, Trash2 } from "lucide-react"
 
 interface CartItemProps {
   id: string
   name: string
+  brandName: string
   price: number
   quantity: number
   image: string
@@ -14,6 +18,7 @@ interface CartItemProps {
 export function CartItem({
   id,
   name,
+  brandName,
   price,
   quantity,
   image,
@@ -21,7 +26,7 @@ export function CartItem({
   onRemove,
 }: CartItemProps) {
   return (
-    <div className="flex items-center gap-4 py-4 border-b">
+    <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
       <div className="relative h-24 w-24 flex-shrink-0">
         <Image
           src={image}
@@ -31,37 +36,40 @@ export function CartItem({
         />
       </div>
       <div className="flex-grow">
-        <h3 className="font-medium">{name}</h3>
-        <p className="text-gray-600">₵{price.toFixed(2)}</p>
-        <div className="mt-2 flex items-center gap-2">
+        <h3 className="font-medium text-lg">{name}</h3>
+        <p className="text-gray-600 text-sm">{brandName}</p>
+        <p className="text-emerald-600 font-medium mt-1">₵{price.toFixed(2)}</p>
+      </div>
+      <div className="flex flex-col items-end gap-3">
+        <div className="flex items-center gap-3">
           <Button
-            size="sm"
+            size="icon"
             variant="outline"
             onClick={() => onUpdateQuantity(id, quantity - 1)}
             disabled={quantity <= 1}
           >
-            -
+            <Minus className="h-4 w-4" />
           </Button>
-          <span className="w-8 text-center">{quantity}</span>
+          <span className="w-8 text-center font-medium">{quantity}</span>
           <Button
-            size="sm"
+            size="icon"
             variant="outline"
             onClick={() => onUpdateQuantity(id, quantity + 1)}
           >
-            +
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </div>
-      <div className="flex flex-col items-end gap-2">
-        <p className="font-medium">₵{(price * quantity).toFixed(2)}</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onRemove(id)}
-          className="text-red-600 hover:text-red-700"
-        >
-          Remove
-        </Button>
+        <div className="flex items-center gap-4">
+          <p className="font-medium">₵{(price * quantity).toFixed(2)}</p>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRemove(id)}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )
