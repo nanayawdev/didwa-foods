@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { X } from 'lucide-react'
+import { Minus, Plus, X } from 'lucide-react'
 import { 
   Dialog, 
   DialogContent, 
@@ -22,10 +22,15 @@ import { useToast } from '@/app/components/ui/use-toast'
 import { Database } from '@/lib/supabase/types'
 
 type Product = Database['public']['Tables']['products']['Row'] & {
-  product_brands: (Database['public']['Tables']['product_brands']['Row'] & {
-    brands: Database['public']['Tables']['brands']['Row']
+  product_brands: (ProductBrand & {
+    brands: Brand
+    variations: Variation
   })[]
 }
+
+type Brand = Database['public']['Tables']['brands']['Row']
+type ProductBrand = Database['public']['Tables']['product_brands']['Row']
+type Variation = Database['public']['Tables']['variations']['Row']
 
 interface ProductModalProps {
   product: Product
@@ -35,25 +40,41 @@ interface ProductModalProps {
 
 export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
   const [quantity, setQuantity] = useState(1)
-  const [selectedBrandId, setSelectedBrandId] = useState(
-    product.product_brands?.[0]?.brands.id || ''
-  )
+  const [selectedBrandId, setSelectedBrandId] = useState('')
+  const [selectedVariationId, setSelectedVariationId] = useState('')
   const { toast } = useToast()
 
-  const selectedBrand = product.product_brands?.find(
-    pb => pb.brands.id === selectedBrandId
+  // Set initial brand and variation when modal opens
+  useEffect(() => {
+    if (isOpen && product.product_brands?.length > 0) {
+      const defaultBrand = product.product_brands[0]
+      setSelectedBrandId(defaultBrand.brands.id)
+      if (defaultBrand.variations) {
+        setSelectedVariationId(defaultBrand.variations.id)
+      }
+      setQuantity(1)
+    }
+  }, [isOpen, product])
+
+  const selectedProductBrand = product.product_brands?.find(
+    pb => pb.brands.id === selectedBrandId && 
+    (!pb.variations || pb.variations.id === selectedVariationId)
   )
 
   const handleAddToCart = () => {
+    if (!selectedProductBrand) return
+
     const cartItem = {
-      id: `${product.id}-${selectedBrandId}`,
+      id: `${product.id}-${selectedBrandId}-${selectedVariationId}`,
       productId: product.id,
       name: product.name,
-      brandId: selectedBrandId,
-      brandName: selectedBrand?.brands.name || 'Generic',
-      price: selectedBrand?.price_per_unit || product.price_per_unit,
+      brandId: selectedProductBrand.brands.id,
+      brandName: selectedProductBrand.brands.name,
+      variationId: selectedProductBrand.variations?.id,
+      variationName: selectedProductBrand.variations?.name,
+      price: selectedProductBrand.price_per_unit,
       quantity,
-      image: product.image_url
+      image: product.image_url,
     }
 
     // Get existing cart
@@ -61,30 +82,28 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
     
     // Check if item already exists
     const existingItemIndex = existingCart.findIndex(
-      (item: any) => item.id === cartItem.id
+      (item: any) => 
+        item.productId === cartItem.productId && 
+        item.brandId === cartItem.brandId &&
+        item.variationId === cartItem.variationId
     )
 
     if (existingItemIndex > -1) {
-      // Update quantity if item exists
       existingCart[existingItemIndex].quantity += quantity
     } else {
-      // Add new item if it doesn't exist
       existingCart.push(cartItem)
     }
 
-    // Save back to localStorage
     localStorage.setItem('cart', JSON.stringify(existingCart))
-
-    // Dispatch storage event to notify header
+    
+    // Dispatch storage event for other components to update
     window.dispatchEvent(new Event('storage'))
 
-    // Show success toast
     toast({
       title: "Added to cart",
-      description: `${quantity} x ${product.name} (${selectedBrand?.brands.name || 'Generic'})`,
+      description: `${quantity}x ${product.name} (${selectedProductBrand.brands.name}${selectedProductBrand.variations ? `, ${selectedProductBrand.variations.name}` : ''})`,
     })
 
-    // Close modal
     onClose()
   }
 
@@ -92,86 +111,134 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogOverlay className="bg-background/0 backdrop-blur-[2px]" />
       <DialogContent className="sm:max-w-md p-0">
-        <DialogHeader className="sr-only">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle>{product.name}</DialogTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
         
-        <div className="relative">
-          <button
-            onClick={onClose}
-            className="absolute right-2 top-2 p-2 rounded-full bg-white/90 hover:bg-white z-10"
-          >
-            <X size={20} />
-          </button>
-          
-          <div className="flex flex-col">
-            <div className="relative h-64 w-full">
-              <Image
-                src={product.image_url}
-                alt={product.name}
-                fill
-                className="object-cover rounded-t-lg"
-              />
-            </div>
+        <div className="p-6 space-y-6">
+          {/* Product Image */}
+          <div className="aspect-square relative">
+            <Image
+              src={product.image_url}
+              alt={product.name}
+              fill
+              className="object-cover rounded-lg"
+            />
+          </div>
 
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
-              <p className="text-gray-600 text-sm mb-4">{product.description}</p>
-
-              {/* Brand Selection */}
-              {product.product_brands && product.product_brands.length > 0 && (
-                <div className="mb-6">
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">
-                    Select Brand
-                  </label>
-                  <Select
-                    value={selectedBrandId}
-                    onValueChange={setSelectedBrandId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a brand" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {product.product_brands.map((pb) => (
-                        <SelectItem key={pb.brands.id} value={pb.brands.id}>
-                          {pb.brands.name} - ₵{pb.price_per_unit.toFixed(2)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between mb-6">
-                <span className="text-2xl font-bold">
-                  ₵{(selectedBrand?.price_per_unit || product.price_per_unit).toFixed(2)}
-                  <span className="text-sm text-gray-500 ml-1">per pack</span>
-                </span>
-                
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50"
-                  >
-                    -
-                  </button>
-                  <span className="text-xl font-medium w-8 text-center">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleAddToCart}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg py-6"
+          {/* Brand Selection */}
+          {product.product_brands && product.product_brands.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Select Brand
+              </label>
+              <Select
+                value={selectedBrandId}
+                onValueChange={(value) => {
+                  setSelectedBrandId(value)
+                  // Reset variation when brand changes
+                  const newBrand = product.product_brands.find(pb => pb.brands.id === value)
+                  if (newBrand?.variations) {
+                    setSelectedVariationId(newBrand.variations.id)
+                  } else {
+                    setSelectedVariationId('')
+                  }
+                }}
               >
-                Add {quantity} item{quantity !== 1 ? 's' : ''} to my order
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from(new Set(product.product_brands.map(pb => pb.brands.id))).map(brandId => {
+                    const brand = product.product_brands.find(pb => pb.brands.id === brandId)?.brands
+                    if (!brand) return null
+                    return (
+                      <SelectItem key={brand.id} value={brand.id}>
+                        {brand.name}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Variation Selection */}
+          {selectedBrandId && product.product_brands.some(pb => pb.brands.id === selectedBrandId && pb.variations) && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Select Size/Weight
+              </label>
+              <Select
+                value={selectedVariationId}
+                onValueChange={setSelectedVariationId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a size/weight" />
+                </SelectTrigger>
+                <SelectContent>
+                  {product.product_brands
+                    .filter(pb => pb.brands.id === selectedBrandId && pb.variations)
+                    .map(pb => (
+                      <SelectItem key={pb.variations.id} value={pb.variations.id}>
+                        {pb.variations.name} - ₵{pb.price_per_unit.toFixed(2)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Quantity Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              Quantity
+            </label>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="h-8 w-8"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="w-12 text-center">{quantity}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setQuantity(quantity + 1)}
+                className="h-8 w-8"
+              >
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+
+          {/* Price and Add to Cart */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-700">Price:</span>
+              <span className="text-lg font-semibold">
+                ₵{((selectedProductBrand?.price_per_unit || 0) * quantity).toFixed(2)}
+              </span>
+            </div>
+            
+            <Button 
+              className="w-full" 
+              onClick={handleAddToCart}
+              disabled={!selectedProductBrand}
+            >
+              Add to Cart
+            </Button>
           </div>
         </div>
       </DialogContent>

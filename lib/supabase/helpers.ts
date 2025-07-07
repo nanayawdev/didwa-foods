@@ -4,6 +4,7 @@ import { createClient } from './client'
 type Product = Database['public']['Tables']['products']['Row']
 type Brand = Database['public']['Tables']['brands']['Row']
 type ProductBrand = Database['public']['Tables']['product_brands']['Row']
+type Variation = Database['public']['Tables']['variations']['Row']
 type Order = Database['public']['Tables']['orders']['Row']
 type ShoppingRequest = Database['public']['Tables']['shopping_requests']['Row']
 
@@ -81,12 +82,19 @@ export async function getProducts(category?: string) {
       product_brands!left (
         id,
         price_per_unit,
+        stock,
         is_default,
         brands (
           id,
           name,
           location,
           logo_url
+        ),
+        variations (
+          id,
+          name,
+          type,
+          unit
         )
       )
     `)
@@ -101,6 +109,7 @@ export async function getProducts(category?: string) {
   return data as (Product & {
     product_brands: (ProductBrand & {
       brands: Brand
+      variations: Variation
     })[]
   })[]
 }
@@ -114,12 +123,19 @@ export async function getProduct(id: string) {
       product_brands (
         id,
         price_per_unit,
+        stock,
         is_default,
         brands (
           id,
           name,
           location,
           logo_url
+        ),
+        variations (
+          id,
+          name,
+          type,
+          unit
         )
       )
     `)
@@ -130,6 +146,7 @@ export async function getProduct(id: string) {
   return data as (Product & {
     product_brands: (ProductBrand & {
       brands: Brand
+      variations: Variation
     })[]
   })
 }
@@ -148,12 +165,19 @@ export async function searchProducts(query: string, filters?: {
       product_brands!left (
         id,
         price_per_unit,
+        stock,
         is_default,
         brands (
           id,
           name,
           location,
           logo_url
+        ),
+        variations (
+          id,
+          name,
+          type,
+          unit
         )
       )
     `)
@@ -188,6 +212,7 @@ export async function searchProducts(query: string, filters?: {
   return data as (Product & {
     product_brands: (ProductBrand & {
       brands: Brand
+      variations: Variation
     })[]
   })[]
 }

@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      variations: {
+        Row: {
+          id: string
+          name: string
+          type: string
+          unit: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          type: string
+          unit?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          type?: string
+          unit?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           id: string
@@ -47,7 +74,9 @@ export type Database = {
           id: string
           product_id: string
           brand_id: string
+          variation_id: string | null
           price_per_unit: number
+          stock: number
           is_default: boolean
           created_at: string | null
         }
@@ -55,7 +84,9 @@ export type Database = {
           id?: string
           product_id: string
           brand_id: string
+          variation_id?: string | null
           price_per_unit: number
+          stock?: number
           is_default?: boolean
           created_at?: string | null
         }
@@ -63,7 +94,9 @@ export type Database = {
           id?: string
           product_id?: string
           brand_id?: string
+          variation_id?: string | null
           price_per_unit?: number
+          stock?: number
           is_default?: boolean
           created_at?: string | null
         }
@@ -80,6 +113,13 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_brands_variation_id_fkey"
+            columns: ["variation_id"]
+            isOneToOne: false
+            referencedRelation: "variations"
             referencedColumns: ["id"]
           }
         ]
