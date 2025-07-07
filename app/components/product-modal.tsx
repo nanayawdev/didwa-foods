@@ -10,6 +10,13 @@ import {
   DialogHeader,
   DialogTitle 
 } from '@/app/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select"
 import { Button } from '@/app/components/ui/button'
 import { useToast } from '@/app/components/ui/use-toast'
 import { Database } from '@/lib/supabase/types'
@@ -117,17 +124,21 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                     Select Brand
                   </label>
-                  <select
+                  <Select
                     value={selectedBrandId}
-                    onChange={(e) => setSelectedBrandId(e.target.value)}
-                    className="w-full border rounded-md py-2 px-3 text-sm"
+                    onValueChange={setSelectedBrandId}
                   >
-                    {product.product_brands.map((pb) => (
-                      <option key={pb.brands.id} value={pb.brands.id}>
-                        {pb.brands.name} - ₵{pb.price_per_unit.toFixed(2)}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {product.product_brands.map((pb) => (
+                        <SelectItem key={pb.brands.id} value={pb.brands.id}>
+                          {pb.brands.name} - ₵{pb.price_per_unit.toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
