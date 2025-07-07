@@ -1,0 +1,201 @@
+import { Database } from './types'
+import { createClient } from './client'
+
+type Product = Database['public']['Tables']['products']['Row']
+type Order = Database['public']['Tables']['orders']['Row']
+type ShoppingRequest = Database['public']['Tables']['shopping_requests']['Row']
+
+// Storage helpers
+export async function uploadProductImage(file: File) {
+  const supabase = createClient()
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${Math.random()}.${fileExt}`
+  const filePath = `${fileName}`
+
+  const { data, error } = await supabase.storage
+    .from('product-images')
+    .upload(filePath, file)
+
+  if (error) throw error
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(filePath)
+
+  return publicUrl
+}
+
+export async function uploadShoppingListImage(file: File) {
+  const supabase = createClient()
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${Math.random()}.${fileExt}`
+  const filePath = `${fileName}`
+
+  const { data, error } = await supabase.storage
+    .from('shopping-list-images')
+    .upload(filePath, file)
+
+  if (error) throw error
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('shopping-list-images')
+    .getPublicUrl(filePath)
+
+  return publicUrl
+}
+
+// Product helpers
+export async function getProducts(category?: string) {
+  const supabase = createClient()
+  const query = supabase
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+
+  if (category) {
+    query.eq('category', category)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data as Product[]
+}
+
+export async function getProduct(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data as Product
+}
+
+export async function searchProducts(query: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+    .or(`name.ilike.%${query}%, description.ilike.%${query}%`)
+    .order('name')
+
+  if (error) throw error
+  return data as Product[]
+}
+
+// Order helpers
+export async function createOrder(order: Database['public']['Tables']['orders']['Insert']) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('orders')
+    .insert(order)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as Order
+}
+
+export async function getOrder(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data as Order
+}
+
+export async function updateOrderStatus(
+  id: string,
+  status: Order['delivery_status']
+) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ delivery_status: status })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as Order
+}
+
+// Shopping request helpers
+export async function createShoppingRequest(
+  request: Database['public']['Tables']['shopping_requests']['Insert']
+) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('shopping_requests')
+    .insert(request)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as ShoppingRequest
+}
+
+export async function getShoppingRequest(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('shopping_requests')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data as ShoppingRequest
+}
+
+export async function updateShoppingRequestStatus(
+  id: string,
+  status: ShoppingRequest['delivery_status']
+) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('shopping_requests')
+    .update({ delivery_status: status })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as ShoppingRequest
+}
+
+// Delivery code verification
+export async function verifyDeliveryCode(
+  identifier: string,
+  code: string
+): Promise<Order | ShoppingRequest | null> {
+  const supabase = createClient()
+
+  // Check orders first
+  const { data: order } = await supabase
+    .from('orders')
+    .select('*')
+    .or(`phone.eq.${identifier},id.eq.${identifier}`)
+    .eq('delivery_code', code)
+    .single()
+
+  if (order) return order as Order
+
+  // Check shopping requests
+  const { data: request } = await supabase
+    .from('shopping_requests')
+    .select('*')
+    .or(`phone.eq.${identifier},id.eq.${identifier}`)
+    .eq('delivery_code', code)
+    .single()
+
+  if (request) return request as ShoppingRequest
+
+  return null
+} 
