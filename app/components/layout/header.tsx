@@ -1,12 +1,51 @@
 'use client'
 
 import Link from "next/link"
-import { Menu, Search, ShoppingCart, HelpCircle } from "lucide-react"
-import { useState } from "react"
+import { Menu, Search, ShoppingCart, HelpCircle, X } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import debounce from 'lodash/debounce'
 
 export function Header() {
-  const [searchQuery, setSearchQuery] = useState("")
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "")
   const cartItemCount = 0 // TODO: Replace with actual cart count from state management
+
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      if (query.trim()) {
+        router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+      } else if (pathname === '/search') {
+        router.push('/products')
+      }
+    }, 300),
+    [router, pathname]
+  )
+
+  // Handle input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value
+    setSearchQuery(newQuery)
+    debouncedSearch(newQuery)
+  }
+
+  // Handle clear search
+  const handleClearSearch = () => {
+    setSearchQuery('')
+    if (pathname === '/search') {
+      router.push('/products')
+    }
+  }
+
+  // Clean up debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel()
+    }
+  }, [debouncedSearch])
 
   return (
     <header className="bg-white border-b fixed w-full top-0 z-50">
@@ -27,17 +66,25 @@ export function Header() {
             {/* Search Bar */}
             <div className="flex-1 max-w-2xl mx-auto">
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="I want to shop for..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full py-2 pl-10 pr-4 bg-emerald-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
                 <Search 
                   size={18} 
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                 />
+                <input
+                  type="text"
+                  placeholder="I want to shop for..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full py-2 pl-10 pr-10 bg-emerald-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
               </div>
             </div>
 

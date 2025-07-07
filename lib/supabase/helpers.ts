@@ -73,14 +73,36 @@ export async function getProduct(id: string) {
   return data as Product
 }
 
-export async function searchProducts(query: string) {
+export async function searchProducts(query: string, filters?: { 
+  minPrice?: number;
+  maxPrice?: number;
+  category?: string;
+}) {
   const supabase = createClient()
-  const { data, error } = await supabase
+  let queryBuilder = supabase
     .from('products')
     .select('*')
     .eq('is_active', true)
-    .or(`name.ilike.%${query}%, description.ilike.%${query}%`)
-    .order('name')
+
+  // Apply search query if provided
+  if (query) {
+    queryBuilder = queryBuilder.or(`name.ilike.%${query}%, description.ilike.%${query}%`)
+  }
+
+  // Apply price range filters if provided
+  if (filters?.minPrice !== undefined) {
+    queryBuilder = queryBuilder.gte('price_per_unit::numeric', filters.minPrice)
+  }
+  if (filters?.maxPrice !== undefined) {
+    queryBuilder = queryBuilder.lte('price_per_unit::numeric', filters.maxPrice)
+  }
+
+  // Apply category filter if provided
+  if (filters?.category) {
+    queryBuilder = queryBuilder.eq('category', filters.category)
+  }
+
+  const { data, error } = await queryBuilder.order('price_per_unit')
 
   if (error) throw error
   return data as Product[]
