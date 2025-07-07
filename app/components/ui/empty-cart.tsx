@@ -14,7 +14,7 @@ export function EmptyCart() {
         Looks like you haven't added any items to your cart yet. Start shopping to fill it with fresh produce!
       </p>
       <Link
-        href="/shop/products"
+        href="/products"
         className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
       >
         Browse Products
