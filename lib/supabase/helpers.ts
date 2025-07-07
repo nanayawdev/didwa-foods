@@ -2,6 +2,8 @@ import { Database } from './types'
 import { createClient } from './client'
 
 type Product = Database['public']['Tables']['products']['Row']
+type Brand = Database['public']['Tables']['brands']['Row']
+type ProductBrand = Database['public']['Tables']['product_brands']['Row']
 type Order = Database['public']['Tables']['orders']['Row']
 type ShoppingRequest = Database['public']['Tables']['shopping_requests']['Row']
 
@@ -25,23 +27,48 @@ export async function uploadProductImage(file: File) {
   return publicUrl
 }
 
-export async function uploadShoppingListImage(file: File) {
+export async function uploadBrandLogo(file: File) {
   const supabase = createClient()
   const fileExt = file.name.split('.').pop()
   const fileName = `${Math.random()}.${fileExt}`
   const filePath = `${fileName}`
 
   const { data, error } = await supabase.storage
-    .from('shopping-list-images')
+    .from('brand-logos')
     .upload(filePath, file)
 
   if (error) throw error
 
   const { data: { publicUrl } } = supabase.storage
-    .from('shopping-list-images')
+    .from('brand-logos')
     .getPublicUrl(filePath)
 
   return publicUrl
+}
+
+// Brand helpers
+export async function getBrands() {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('brands')
+    .select('*')
+    .eq('is_active', true)
+    .order('name')
+
+  if (error) throw error
+  return data
+}
+
+export async function getBrand(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('brands')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
 }
 
 // Product helpers
@@ -49,7 +76,20 @@ export async function getProducts(category?: string) {
   const supabase = createClient()
   const query = supabase
     .from('products')
-    .select('*')
+    .select(`
+      *,
+      product_brands!left (
+        id,
+        price_per_unit,
+        is_default,
+        brands (
+          id,
+          name,
+          location,
+          logo_url
+        )
+      )
+    `)
     .eq('is_active', true)
 
   if (category) {
@@ -58,30 +98,65 @@ export async function getProducts(category?: string) {
 
   const { data, error } = await query
   if (error) throw error
-  return data as Product[]
+  return data as (Product & {
+    product_brands: (ProductBrand & {
+      brands: Brand
+    })[]
+  })[]
 }
 
 export async function getProduct(id: string) {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select(`
+      *,
+      product_brands (
+        id,
+        price_per_unit,
+        is_default,
+        brands (
+          id,
+          name,
+          location,
+          logo_url
+        )
+      )
+    `)
     .eq('id', id)
     .single()
 
   if (error) throw error
-  return data as Product
+  return data as (Product & {
+    product_brands: (ProductBrand & {
+      brands: Brand
+    })[]
+  })
 }
 
 export async function searchProducts(query: string, filters?: { 
   minPrice?: number;
   maxPrice?: number;
   category?: string;
+  brandId?: string;
 }) {
   const supabase = createClient()
   let queryBuilder = supabase
     .from('products')
-    .select('*')
+    .select(`
+      *,
+      product_brands!left (
+        id,
+        price_per_unit,
+        is_default,
+        brands (
+          id,
+          name,
+          location,
+          logo_url
+        )
+      )
+    `)
     .eq('is_active', true)
 
   // Apply search query if provided
@@ -102,10 +177,19 @@ export async function searchProducts(query: string, filters?: {
     queryBuilder = queryBuilder.eq('category', filters.category)
   }
 
+  // Apply brand filter if provided
+  if (filters?.brandId) {
+    queryBuilder = queryBuilder.contains('product_brands', [{ brand_id: filters.brandId }])
+  }
+
   const { data, error } = await queryBuilder.order('price_per_unit')
 
   if (error) throw error
-  return data as Product[]
+  return data as (Product & {
+    product_brands: (ProductBrand & {
+      brands: Brand
+    })[]
+  })[]
 }
 
 // Order helpers

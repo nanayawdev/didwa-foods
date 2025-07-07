@@ -9,6 +9,81 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      brands: {
+        Row: {
+          id: string
+          name: string
+          location: string
+          description: string | null
+          logo_url: string | null
+          is_active: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          location: string
+          description?: string | null
+          logo_url?: string | null
+          is_active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          location?: string
+          description?: string | null
+          logo_url?: string | null
+          is_active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      product_brands: {
+        Row: {
+          id: string
+          product_id: string
+          brand_id: string
+          price_per_unit: number
+          is_default: boolean
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          brand_id: string
+          price_per_unit: number
+          is_default?: boolean
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          brand_id?: string
+          price_per_unit?: number
+          is_default?: boolean
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_brands_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_brands_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       orders: {
         Row: {
           address: string

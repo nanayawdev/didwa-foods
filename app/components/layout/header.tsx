@@ -10,16 +10,36 @@ export function Header() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "")
-  const cartItemCount = 0 // TODO: Replace with actual cart count from state management
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('query') || "")
+  const [cartItems, setCartItems] = useState<any[]>([])
+
+  useEffect(() => {
+    // Load cart items from localStorage
+    const loadCartItems = () => {
+      const savedCart = localStorage.getItem('cart')
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart))
+      }
+    }
+
+    // Add event listener for storage changes
+    window.addEventListener('storage', loadCartItems)
+    
+    // Initial load
+    loadCartItems()
+
+    return () => {
+      window.removeEventListener('storage', loadCartItems)
+    }
+  }, [])
 
   // Debounced search function
   const debouncedSearch = useCallback(
     debounce((query: string) => {
       if (query.trim()) {
-        router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+        router.push(`/search?query=${encodeURIComponent(query.trim())}`)
       } else if (pathname === '/search') {
-        router.push('/products')
+        router.push('/')
       }
     }, 300),
     [router, pathname]
@@ -36,7 +56,7 @@ export function Header() {
   const handleClearSearch = () => {
     setSearchQuery('')
     if (pathname === '/search') {
-      router.push('/products')
+      router.push('/')
     }
   }
 
@@ -96,9 +116,9 @@ export function Header() {
                 className="relative p-2 text-gray-700 hover:text-gray-900"
               >
                 <ShoppingCart size={22} />
-                {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full">
-                    {cartItemCount}
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-emerald-600 text-white text-xs rounded-full">
+                    {cartItems.length}
                   </span>
                 )}
               </Link>
