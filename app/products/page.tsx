@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { Button } from "@/app/components/ui/button"
 import { LoadingSpinner } from "@/app/components/ui/loading-spinner"
 import { getProducts } from "@/lib/supabase/helpers"
 import { useEffect } from "react"
+import { ProductCard } from "@/app/components/product-card"
 
 const categories = [
   { id: "vegetables", name: "Vegetables", icon: "🥬" },
@@ -74,37 +74,7 @@ export default function ProductsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-lg overflow-hidden border shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="relative aspect-square">
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                    {product.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold">
-                      ₵{product.price_per_unit.toFixed(2)}
-                    </span>
-                    <Button
-                      onClick={() => {
-                        // TODO: Add to cart functionality
-                      }}
-                    >
-                      Add to Cart
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}
